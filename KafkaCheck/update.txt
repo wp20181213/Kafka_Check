@@ -1,0 +1,29 @@
+2019-07-20 by WangPeng
+1、支持同时读取多个不同仪器trc文件或其他文本文件
+2、支持按关键字进行排序（目前仅支持按数值大小排序）
+3、支持去除空行以及'/'行
+4、支持基本文件修改、保存、关键词查找等操作
+
+todo：
+1、按照时间段进行数据过滤，需GetQTMData记录时更换时间记录格式
+2、增加去除错误信息选项
+3、关闭时弹窗是否保存数据
+4、查找时光标不能实时移动以及循环查找
+5、界面优化
+
+2019-08-06 by WangPeng
+1、增加读取index、offset、ReceiveTime和路径，显示到表格
+2、点击表头排序
+3、增加配置文件，控制trc文件读取路径
+4、增加日期过滤，选择日期后自动打开相应文件并显示
+
+2019-08-07 by WangPeng
+1、AddDataToGrid增加读取device的值，增加控制device列和index列没有数据时隐藏；
+2、增加函数FindStringBetweenAAndB，读取字串中A和B之间的值（A/B之间不存在额外的A或B）
+3、增加函数ShowColData，控制某一列是否显示
+4、ClearAsgTestData修改初始化6列2行，增加device列，初始化隐藏index和device列
+5、FillCaptionOfTestData修改初始化表头
+6、修改SetAllColWidth，更改自动改变列宽的方式
+
+
+
