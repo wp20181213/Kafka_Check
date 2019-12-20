@@ -34,3 +34,9 @@ build/
 *.exe
 
 *.dcu
+
+KafkaCheck/__history/
+
+*.stat
+
+KafkaCheck/KafkaCheck.dfm
