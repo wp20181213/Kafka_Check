@@ -34,6 +34,8 @@ const
 
   g_ColonConnection = ':';
 
+  //8为有效数据行数，该值由数据格式决定
+  g_ValidDataNumber = 8;
 
 var
   //参数文件路径。

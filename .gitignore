@@ -40,3 +40,5 @@ KafkaCheck/__history/
 *.stat
 
 KafkaCheck/KafkaCheck.dfm
+
+KafkaCheck/uConstDef.pas.cbk

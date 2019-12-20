@@ -147,7 +147,7 @@ begin
         //如果数据齐，给每个数据添加路径，并在后面增加空行
         begin
           cells[ColCount - 1, l_Row] := AFileName;
-          for k := i to i + 8 do
+          for k := i to i + g_ValidDataNumber do
           begin
             //如果K的值大于stringlist，那么表示后面没有数据了，跳出
             //否则就把数据按照相应格式记录下来
