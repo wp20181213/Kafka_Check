@@ -53,6 +53,7 @@ type
     FStartDate : TDateTime;
     FEndDate : TDateTime;
     FSelType : string;
+    FNotepadPath: String;
     //配置文件名
     FTraceIniPath : String;
     FFileNameList : TStringList;
@@ -95,7 +96,8 @@ type
     procedure FindNum(ARow : integer);
     procedure ShowSelDate(AStartDate, AEndDate: TDateTime);
     procedure GetSelDate(var AStartDate, AEndDate: TDateTime; var ASelType: string; slTimeOptionList: TStringList);
-    procedure SetSelDate(AStartDate, AEndDate: TDateTime; ASelType: string);
+    procedure SavaSelDate(AStartDate, AEndDate: TDateTime; ASelType: string);
+    procedure ClearData;
     { Private declarations }
 
   public
@@ -161,19 +163,17 @@ begin
   end;
 end;
 
-procedure TKafkaCheckForm.AddIntToGrid(AData, AKey: string; ACol, ARow: Integer);
-var
-  l_str : string;
+procedure TKafkaCheckForm.AddIntToGrid(AData, AKey: string; ACol, ARow:
+   Integer);
 begin
-  l_str := trim(FindIntAfterSubStr(AData, AKey));
-  asgTestData.cells[ACol, ARow] := l_str;
+  asgTestData.cells[ACol, ARow] := Trim(FindIntAfterSubStr(AData, AKey));
 end;
 
 procedure TKafkaCheckForm.AddStrToGrid(AData, AKey: string; ACol, ARow: Integer);
 var
   l_str : string;
 begin
-  l_str := trim(FindStringBetweenKey(AData, AKey, ' '));
+  l_str := Trim(FindStringBetweenKey(AData, AKey, ' '));
   asgTestData.cells[ACol, ARow] := l_str;
 
   if asgTestData.ColumnHeaders[ACol] = 'Device' then
@@ -207,7 +207,7 @@ begin
             if j = colcount - 1 then
             begin
               ATitle := '实测数据';
-              AText := FTestDataList[i+1] + #13 +FTestDataList[i+2];
+              AText := FTestDataList[i + 1] + #13 +FTestDataList[i + 2];
             end
             else break;
           end;
@@ -267,21 +267,19 @@ end;
 procedure TKafkaCheckForm.asgTestDataDblClickCell(Sender: TObject; ARow,
   ACol: Integer);
 var
-  l_str, l_ExePath : string;
-  l_strs : TStringList;
+  l_str: string;
+  l_strs: TStringList;
 begin
   with asgTestData do
   begin
     if ARow > 0 then
     begin
-      if ColumnHeaders[ACol] = G_FilePath then
+      if ColumnHeaders[ACol] = g_TracePathFilePathKN then
       begin
         l_strs := TStringList.Create;
         try
           l_str := cells[ACol, ARow];
-          FsIniFile.ReadSectionValues('EXEPath', l_strs);
-          l_ExePath := GetAValue(l_strs, 'Notepad++', 1);
-          ShellExecute(Handle,'open',pchar(l_ExePath),pchar(l_str),'',SW_SHOWNORMAL);
+          ShellExecute(Handle, 'open', pchar(FNotepadPath), pchar(l_str), '', SW_SHOWNORMAL);
         finally
           l_strs.Free;
         end;
@@ -297,7 +295,7 @@ var
 begin
   with asgTestData do
   begin
-    if ColumnHeaders[ACol] = G_Device then
+    if ColumnHeaders[ACol] = g_TracePathDeviceKN then
       begin
         for i := 0 to FDeviceNameList.Count - 1 do
         begin
@@ -325,7 +323,6 @@ begin
         end;
       end;
   end;
-
 end;
 
 procedure TKafkaCheckForm.asgTestDataGetColumnFilter(Sender: TObject;
@@ -333,16 +330,15 @@ procedure TKafkaCheckForm.asgTestDataGetColumnFilter(Sender: TObject;
 var
   i :integer;
 begin
-  if asgTestData.ColumnByHeader(G_Device) <> -1 then
+  if asgTestData.ColumnByHeader(g_TracePathDeviceKN) <> -1 then
   begin
-    if Column = asgTestData.ColumnByHeader(G_Device) then
+    if Column = asgTestData.ColumnByHeader(g_TracePathDeviceKN) then
     begin
       for i := 0 to FDeviceNameList.Count - 1 do
       begin
         Filter.Add(FDeviceNameList[i]);
       end;
-      if i = FDeviceNameList.Count then
-        Filter.Add('');
+      Filter.Add('');
     end;
   end;
 end;
@@ -359,6 +355,13 @@ begin
     end;
     RemoveRows(2, i - 2);
   end;
+end;
+
+procedure TKafkaCheckForm.ClearData;
+begin
+  ClearAsgTestData;
+  FFileNameList.Clear;
+  FTestDataList.Clear;
 end;
 
 procedure TKafkaCheckForm.EnumFileInPath(PPath: PChar; AFileExt: string;
@@ -444,12 +447,10 @@ begin
   try
     if l_fm.Execute(FStartDate, FEndDate, FSelType) then //打开选择日期的对话框，默认今天
     begin
-      AppendLog(G_TraceFilePathDir+'Log\', 'ActOpenFileExcute','start', Now, formatdatetime('yyyymmdd',now)+ '' +'.log');
+      AppendLog(G_TraceFilePathDir+'Log\', 'ActOpenFileExcute','start', Now,
+         formatdatetime('yyyymmdd',now)+ '' +'.log');
 
-      ClearAsgTestData;
-      FFileNameList.Clear;
-      FTestDataList.Clear;
-
+      ClearData;
       GetFileList(FFilePath, FFileNameList);
       //从配置文件中读取相应的文件路径，将该路径下所有完整文件名（路径+文件名）放到数组中
       //根据文件名中的日期过滤文件，将不符合日期的完整文件名从数组中删掉
@@ -480,9 +481,7 @@ end;
 
 function TKafkaCheckForm.FileCreateWithinDate(AFileDate : string): boolean;
 begin
-  Result := False;
-  if IsDateInSelectDate(FStartDate, FEndDate, AFileDate) then
-    Result := True;
+  Result := IsDateInSelectDate(FStartDate, FEndDate, AFileDate);
 end;
 
 function TKafkaCheckForm.FileEditWithinDate(AFileName : string): boolean;
@@ -490,11 +489,9 @@ var
   l_FileDate : string;
   l_FileDateTime : TDateTime;
 begin
-  Result := False;
   FileAge(AFileName, l_FileDateTime);
   l_FileDate := Formatdatetime(FILE_DATE_FORMAT, l_FileDateTime);
-  if IsDateInSelectDate(FStartDate, FEndDate, l_FileDate) then
-    Result := True;
+  Result := IsDateInSelectDate(FStartDate, FEndDate, l_FileDate);
 end;
 
 function TKafkaCheckForm.FindIntAfterSubStr(ASrcStr, ASubStr: string): String;
@@ -525,7 +522,7 @@ var
 begin
   with asgTestData do
   begin
-    l_ColIndex := ColumnHeaders.IndexOf(G_Number);
+    l_ColIndex := ColumnHeaders.IndexOf(g_TracePathNumberKN);
     FIndex := cells[l_ColIndex, ARow];
   end;
 end;
@@ -550,7 +547,7 @@ end;
 
 procedure TKafkaCheckForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  SetSelDate(FStartDate, FEndDate, FSelType);
+  SavaSelDate(FStartDate, FEndDate, FSelType);
   Action := caFree;
 end;
 
@@ -561,9 +558,6 @@ begin
   FDeviceNameList := TStringList.Create;
   FTestDataList := TStringList.Create;
   FGrepNameList := TStringList.Create;
-  statusbar1.panels[0].text:='日期：'+datetostr(date());
-  statusbar1.panels[1].text:='时间：'+timetostr(time());
-  ShowSelDate(0,0);
 end;
 
 procedure TKafkaCheckForm.FormDestroy(Sender: TObject);
@@ -581,7 +575,7 @@ var
   l_strList : TStringList;
 begin
   G_TraceFilePathDir := ExtractFilePath(Application.ExeName); //路径末尾含'\'
-  FTraceIniPath := G_TraceFilePathDir + G_TraceFilePath; //TracePath.ini 在当前exe路径下
+  FTraceIniPath := G_TraceFilePathDir + g_TraceFilePath; //TracePath.ini 在当前exe路径下
   if not FileExists(FTraceIniPath) then
   begin
     ShowMessage(FTraceIniPath + '配置文件不存在，请检查！');
@@ -593,16 +587,23 @@ begin
   try
     if IsReadIniFile(FsIniFile) then
     begin
-      FsIniFile.ReadSectionValues('TracePath', FFilePath);
+      FsIniFile.ReadSectionValues(g_TracePathTracePathSN, FFilePath);
 
-      FsIniFile.ReadSectionValues('TimeOption', l_strList);
+      FsIniFile.ReadSectionValues(g_TracePathTimeOptionSN, l_strList);
       GetSelDate(FStartDate, FEndDate, FSelType, l_strList);
 
+      FsIniFile.ReadSectionValues(g_TracePathEXEPathSN, l_strList);
+      FNotepadPath := GetAValue(l_strList, g_TracePathNotepadKN, 1);
+
       l_strList.clear;
-      FsIniFile.ReadSectionValues('VarField', l_strList);
+      FsIniFile.ReadSectionValues(g_TracePathVarFieldSN, l_strList);
       SetCaption(l_strList);
       GetGrepName(l_strList, FGrepNameList);
       SetAllColWidth;
+
+      statusbar1.panels[0].Text := '日期：' + DateToStr(date());
+      statusbar1.panels[1].Text := '时间：' + TimeToStr(time());
+      ShowSelDate(0,0);
     end;
   finally
     l_strList.Free;
@@ -688,12 +689,12 @@ function TKafkaCheckForm.IsDateInSelectDate(AStartDate, AEndDate: TDateTime;
 var
   l_StartDate, l_EndDate : string;
 begin
-  result := false;
+  Result := false;
   l_StartDate := Formatdatetime(FILE_DATE_FORMAT, AStartDate);
   l_EndDate := Formatdatetime(FILE_DATE_FORMAT, AEndDate);
   if (StrToInt(ATargetDate) >= StrToInt(l_StartDate)) and (StrToInt(ATargetDate) <=
      StrToInt(l_EndDate)) then
-     result := true;
+  Result := True;
 end;
 
 function TKafkaCheckForm.IsNumberic(AStr: string): boolean;
@@ -722,7 +723,7 @@ begin
       for i := 0 to slFilePath.Count - 1 do
       begin
         l_str := ValueOfStrs(slFilePath, i);
-        EnumFileInPath(PChar(l_str), G_suffix, slFileList); //遍历 l_str路径下所有文件，添加到FFileNameList里
+        EnumFileInPath(PChar(l_str), g_TRCSuffix, slFileList); //遍历 l_str路径下所有文件，添加到FFileNameList里
       end;
     end;
 end;
@@ -754,7 +755,7 @@ begin
     exit;
   with AGrid do
   begin
-    l_Indexcol := ColumnHeaders.IndexOf(G_Number);
+    l_Indexcol := ColumnHeaders.IndexOf(g_TracePathNumberKN);
     if l_Indexcol = -1 then
       exit;
     for l_Indexrow := 1 to RowCount - 1 do
@@ -814,13 +815,16 @@ begin
   //将slVarFieldList的names取出来作为表头
   l_strs := TStringList.Create;
   try
-    for i := 0 to slVarFieldList.Count - 1 do
+    with asgTestData do
     begin
-      l_strs.Add(NameOfStrs(slVarFieldList, i));
-      asgTestData.ColCount := asgTestData.ColCount + 1;
+      for i := 0 to slVarFieldList.Count - 1 do
+      begin
+        l_strs.Add(NameOfStrs(slVarFieldList, i));
+        ColCount := ColCount + 1;
+      end;
+      ColumnHeaders := l_strs;
+      RemoveCols(ColCount - 1, 1);
     end;
-    asgTestData.ColumnHeaders := l_strs;
-    asgTestData.RemoveCols(asgTestData.ColCount - 1, 1);
   finally
     l_strs.Free;
   end;
@@ -839,13 +843,13 @@ begin
   begin
     if RowCount = 2 then
     begin
-      for i := 1 to asgTestData.ColCount - 1 do
+      for i := 1 to ColCount - 1 do
       begin
         if cells[i, 1] = '' then continue
         else break;
       end;
 
-      if i = asgTestData.ColCount then
+      if i = ColCount then
       begin
         exit
       end;
@@ -854,20 +858,19 @@ begin
   end;
 end;
 
-procedure TKafkaCheckForm.SetSelDate(AStartDate, AEndDate: TDateTime;
+procedure TKafkaCheckForm.SavaSelDate(AStartDate, AEndDate: TDateTime;
   ASelType: string);
 begin
-  FsIniFile.WriteString('TimeOption', 'TimeMethods', ASelType);
-  FsIniFile.WriteDate('TimeOption', 'StartTime', AStartDate);
-  FsIniFile.WriteDate('TimeOption', 'EndTime', AEndDate);
+  FsIniFile.WriteString(g_TracePathTimeOptionSN, g_TracePathTimeMethodsKN, ASelType);
+  FsIniFile.WriteDate(g_TracePathTimeOptionSN, g_TracePathStartTimeKN, AStartDate);
+  FsIniFile.WriteDate(g_TracePathTimeOptionSN, g_TracePathEndTimeKN, AEndDate);
 end;
 
-procedure TKafkaCheckForm.GetSelDate(var AStartDate, AEndDate: TDateTime; var ASelType: string; slTimeOptionList: TStringList);
-var
-  l_str : string;
+procedure TKafkaCheckForm.GetSelDate(var AStartDate, AEndDate: TDateTime; var
+   ASelType: string; slTimeOptionList: TStringList);
 begin
   ASelType := slTimeOptionList.ValueFromIndex[0];
-  if ASelType = G_Today then
+  if ASelType = g_Today then
   begin
     AStartDate := Date;
     AEndDate := Date;
@@ -883,13 +886,13 @@ procedure TKafkaCheckForm.ShowSelDate(AStartDate, AEndDate: TDateTime);
 begin
   if (FStartDate = 0) or (FEndDate = 0) then
   begin
-    statusbar.panels[0].Text :='开始日期：未选择';
-    statusbar.panels[1].Text :='结束日期：未选择';
+    statusbar.panels[0].Text := g_StartDate + g_ColonConnection + '未选择';
+    statusbar.panels[1].Text := g_EndDate + g_ColonConnection + '未选择';
   end
   else
   begin
-    statusbar.panels[0].Text :='开始日期：' + DateToStr(FStartDate);
-    statusbar.panels[1].Text :='结束日期：' + DateToStr(FEndDate);
+    statusbar.panels[0].Text :=g_StartDate + g_ColonConnection + DateToStr(FStartDate);
+    statusbar.panels[1].Text :=g_EndDate + g_ColonConnection + DateToStr(FEndDate);
   end;
   statusbar.panels[0].Width := paSelDate.Width div 2;
   statusbar.panels[1].Width := paSelDate.Width div 2;
@@ -902,9 +905,7 @@ var
 begin
   AppendLog(G_TraceFilePathDir+'Log\', 'ActRefreshAsgExecute','start', Now, formatdatetime('yyyymmdd',now)+ '' +'.log');
 
-  ClearAsgTestData;
-  FFileNameList.Clear;
-  FTestDataList.Clear;
+  ClearData;
 
   GetFileList(FFilePath, FFileNameList);
   l_SingleFileContent := TStringList.Create;
@@ -929,13 +930,13 @@ begin
     asgTestData.RemoveRows(asgTestData.RowCount - 1, 1); //清除最后一个空行
   SetAllColWidth;
   SetGridNo;
-  AppendLog(G_TraceFilePathDir+'Log\', 'ActRefreshAsgExecute','end', Now, formatdatetime('yyyymmdd',now)+ '' +'.log');
-
+  AppendLog(G_TraceFilePathDir+'Log\', 'ActRefreshAsgExecute','end', Now,
+     formatdatetime('yyyymmdd',now)+ '' +'.log');
 end;
 
 procedure TKafkaCheckForm.Timer1Timer(Sender: TObject);
 begin
-  statusbar1.panels[0].text:='日期：'+datetostr(date());
-  statusbar1.panels[1].text:='时间：'+timetostr(time());
+  statusbar1.panels[0].Text := '日期：' + DateToStr(Date());
+  statusbar1.panels[1].Text := '时间：' + TimeToStr(Time());
 end;
 end.

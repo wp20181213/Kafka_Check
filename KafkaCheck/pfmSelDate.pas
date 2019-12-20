@@ -50,7 +50,7 @@ procedure TfmSelDate.AsgDateEditChange(Sender: TObject; ACol, ARow: Integer;
 begin
   with AsgDate do
   begin
-    if value = G_Today then
+    if value = g_Today then
     begin
       cells[1, 1] := datetostr(Date);
       cells[1, 2] := datetostr(Date);
@@ -81,11 +81,11 @@ begin
       0:
         begin
           ClearComboString;
-          AddComboString(G_Today);
-          AddComboString('自定义');
+          AddComboString(g_Today);
+          AddComboString(g_Customize);
         end;
     end;
-    if Cells[1, 0] = G_Today then
+    if Cells[1, 0] = g_Today then
     begin
       if ARow in [1, 2] then
         options := options - [goEditing]
@@ -113,7 +113,7 @@ procedure TfmSelDate.SelectDate(var AChooseStartDate, AChooseEndDate: TDateTime;
 var
   l_StartDate, l_EndDate : string;
 begin
-  if AsgDate.Cells[1, 0] = G_Today then
+  if AsgDate.Cells[1, 0] = g_Today then
   begin
     AChooseStartDate := Date;
     AChooseEndDate := Now;
@@ -139,18 +139,18 @@ begin
   with AsgDate do
   begin
     Cells[0, 0] := '选择方式';
-    Cells[0, 1] := '开始时间';
-    Cells[0, 2] := '结束时间';
+    Cells[0, 1] := g_StartDate;
+    Cells[0, 2] := g_EndDate;
 
-    if (ASelType = '') or (ASelType = G_Today) then
+    if (ASelType = '') or (ASelType = g_Today) then
     begin
-      Cells[1, 0] := G_Today;
+      Cells[1, 0] := g_Today;
       Cells[1, 1] := DateToStr(now);
       Cells[1, 2] := DateToStr(now);
     end
     else
     begin
-      Cells[1, 0] := '自定义';
+      Cells[1, 0] := g_Customize;
       Cells[1, 1] := DateToStr(AStartDate);
       Cells[1, 2] := DateToStr(AEndDate);
     end;
